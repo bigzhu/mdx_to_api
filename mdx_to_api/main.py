@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 
-from authorization import checkAuthorization
+from authorization import checkAuthorization, AuthorizationError
 from mdict_query import IndexBuilder
 from mdx_util import get_definition_mdx
 
@@ -21,6 +21,9 @@ async def vocabulary(
     word: str,
     authorization: Annotated[str | None, Header()] = None,
 ):
-    checkAuthorization(authorization)
+    try:
+        checkAuthorization(authorization)
+    except AuthorizationError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     content = get_definition_mdx(word, builder)[0]
     return HTMLResponse(content=content, status_code=200)

@@ -1,14 +1,20 @@
 import jwt
 import os
 import time
-from fastapi import HTTPException
+
+
+class AuthorizationError(Exception):
+    def __init__(self, status_code, detail):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(self.detail)
 
 
 def checkAuthorization(authorization):
     audience = os.getenv("AUDIENCE")
     public_key = os.getenv("PUBLIC_KEY")
     if public_key is None:
-        raise HTTPException(
+        raise AuthorizationError(
             status_code=500,
             detail={
                 "message": "Must set PUBLIC_KEY",
@@ -18,7 +24,7 @@ def checkAuthorization(authorization):
         )
 
     if authorization is None or not authorization.startswith("Bearer "):
-        raise HTTPException(
+        raise AuthorizationError(
             status_code=401,
             detail={
                 "message": "Authentication Token is missing or invalid!",
@@ -49,7 +55,7 @@ def checkAuthorization(authorization):
         return decoded_token
 
     except jwt.ExpiredSignatureError:
-        raise HTTPException(
+        raise AuthorizationError(
             status_code=401,
             detail={
                 "message": "Token has expired",
@@ -58,12 +64,12 @@ def checkAuthorization(authorization):
             },
         )
     except jwt.InvalidTokenError as e:
-        raise HTTPException(
+        raise AuthorizationError(
             status_code=401,
             detail={"message": "Invalid token", "data": None, "error": str(e)},
         )
     except Exception as e:
-        raise HTTPException(
+        raise AuthorizationError(
             status_code=401,
             detail={"message": "Something went wrong", "data": None, "error": str(e)},
         )
